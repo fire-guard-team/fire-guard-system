@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+
         $this->call([
             RolesTableSeeder::class,
             UsersTableSeeder::class,
@@ -21,5 +22,7 @@ class DatabaseSeeder extends Seeder
             SensorTypesTableSeeder::class,
             SensorsTableSeeder::class, 
         ]);
+        // User::factory(10)->create();
+
     }
 }
