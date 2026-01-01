@@ -1,4 +1,5 @@
 import LiveSensorDataSection from "../../../components/dashboard/home/LiveSensorDataSection";
+import RecentAlerts from "../../../components/dashboard/home/RecentAlerts";
 import RiskDistributionSection from "../../../components/dashboard/home/RiskDistributionSection";
 import StatCard from "../../../components/dashboard/home/StatCard";
 
@@ -32,6 +33,9 @@ const DashboardOverview = () => {
         <LiveSensorDataSection />
 
         <RiskDistributionSection />
+      </div>
+      <div className="">
+        <RecentAlerts />
       </div>
     </section>
   );
