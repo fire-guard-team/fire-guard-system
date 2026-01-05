@@ -1,10 +1,18 @@
+import SectorOverview from "../../../components/dashboard/Forest/SectorOverview";
+import SectorTools from "../../../components/dashboard/Forest/SectorTools";
 
 const ForestSectors = () => {
   return (
-    <div>
-      hello from ForestSectors
-    </div>
-  )
-}
+    <div className="flex gap-6 justify-be">
+      <div className="min-w-6xl h-full">
+        <SectorOverview />
+      </div>
 
-export default ForestSectors
+      <div className="w-full">
+        <SectorTools />
+      </div>
+    </div>
+  );
+};
+
+export default ForestSectors;
