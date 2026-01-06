@@ -16,7 +16,7 @@ const SectorOverview = () => {
 
           <LegendItem color="bg-red-500" label="Active Fire Risk" />
           <LegendItem color="bg-orange-500" label="High Risk" />
-          <LegendItem color="bg-yellow-400" label="Moderate Risk" />
+          <LegendItem color="bg-yellow-400" label="Moderate Risk" />بخف
           <LegendItem color="bg-green-500" label="Low Risk" />
           <LegendItem border label="Forest Boundary" />
         </div>
