@@ -1,10 +1,7 @@
+import SettingsLayout from "../../../components/dashboard/settings/SettingsLayout"
 
 const Settings = () => {
-  return (
-    <div>
-      hello from Settings
-    </div>
-  )
+  return <SettingsLayout />
 }
 
 export default Settings

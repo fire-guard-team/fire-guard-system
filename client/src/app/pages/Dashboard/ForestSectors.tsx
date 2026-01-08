@@ -4,7 +4,7 @@ import SectorTools from "../../../components/dashboard/Forest/SectorTools";
 const ForestSectors = () => {
   return (
     <div className="flex gap-6 justify-be">
-      <div className="min-w-6xl h-full">
+      <div className="min-w-4xl h-full">
         <SectorOverview />
       </div>
 
