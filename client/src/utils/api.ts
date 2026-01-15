@@ -167,6 +167,35 @@ class ApiService {
     return this.request('/v1/sectors');
   }
 
+  async getSectorsGeo(): Promise<any> {
+    return this.request('/v1/sectors/geo');
+  }
+
+  // Project Areas API
+  async getCurrentProjectArea(): Promise<any> {
+    return this.request('/v1/project-areas/current');
+  }
+
+  async updateCurrentProjectAreaBoundary(boundary: any): Promise<any> {
+    return this.request('/v1/project-areas/current/boundary', {
+      method: 'PUT',
+      body: JSON.stringify({ boundary }),
+    });
+  }
+
+  // Map overlays
+  async getSensorsGeo(): Promise<any> {
+    return this.request('/v1/sensors/geo');
+  }
+
+  async getMapAlerts(): Promise<any> {
+    return this.request('/v1/map/alerts');
+  }
+
+  async getHistoricalFires(): Promise<any> {
+    return this.request('/v1/map/historical-fires');
+  }
+
   // Reports API
   async getReportsAnalytics(params?: { time_range?: string; report_type?: string }): Promise<any> {
     const queryParams = new URLSearchParams();

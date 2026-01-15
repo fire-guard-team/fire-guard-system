@@ -9,6 +9,8 @@ use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\RoleController;
 use App\Http\Controllers\Api\SettingsController;
+use App\Http\Controllers\Api\ProjectAreaController;
+use App\Http\Controllers\Api\MapController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\TelemetryController;
 
@@ -28,8 +30,14 @@ Route::middleware('auth:sanctum')->prefix('v1/alerts')->group(function () {
     Route::get('/stats/summary', [AlertController::class, 'stats']); // Dashboard
 });
 
-Route::middleware('auth:sanctum')->prefix('v1/sectors')->group(function () {
-    Route::get('/', [SectorController::class, 'index']); // قائمة القطاعات
+// Public (read-only) map data
+Route::prefix('v1')->group(function () {
+    Route::get('/sectors', [SectorController::class, 'index']); // قائمة القطاعات داخل Project Area
+    Route::get('/sectors/geo', [SectorController::class, 'geo']); // polygons
+    Route::get('/sensors/geo', [SensorController::class, 'geo']); // markers
+    Route::get('/project-areas/current', [ProjectAreaController::class, 'current']); // active boundary
+    Route::get('/map/alerts', [MapController::class, 'alerts']); // warnings + fires
+    Route::get('/map/historical-fires', [MapController::class, 'historicalFires']); // past events
 });
 
 Route::middleware('auth:sanctum')->prefix('v1/sensors')->group(function () {
@@ -65,5 +73,10 @@ Route::middleware('auth:sanctum')->prefix('v1/users')->group(function () {
 Route::middleware('auth:sanctum')->prefix('v1/settings')->group(function () {
     Route::get('/', [SettingsController::class, 'index']); // get settings
     Route::put('/', [SettingsController::class, 'update']); // update settings
+});
+
+Route::middleware('auth:sanctum')->prefix('v1/project-areas')->group(function () {
+    Route::get('/', [ProjectAreaController::class, 'index']); // list (admin)
+    Route::put('/current/boundary', [ProjectAreaController::class, 'updateCurrentBoundary']); // update boundary (admin)
 });
 

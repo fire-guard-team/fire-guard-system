@@ -6,11 +6,11 @@ import Header from "./Header"
 import UsersTable from "./UsersTable"
 import AddUserModal from "./AddUserModal"
 import { apiService } from "../../../utils/api";
-import RolesPermissions from "./sections/RolesPermissions";
-import GeneralSettings from "./sections/GeneralSettings";
-import AlertThresholds from "./sections/AlertThresholds";
-import NotificationSettings from "./sections/NotificationSettings";
-import SoundSettings from "./sections/SoundSettings";
+import RolesPermissions from "./sections/RolesPermissions.tsx";
+import GeneralSettings from "./sections/GeneralSettings.tsx";
+import AlertThresholds from "./sections/AlertThresholds.tsx";
+import NotificationSettings from "./sections/NotificationSettings.tsx";
+import SoundSettings from "./sections/SoundSettings.tsx";
 
 interface User {
   id: number;

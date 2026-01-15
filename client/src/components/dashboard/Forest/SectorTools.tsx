@@ -1,4 +1,8 @@
-const SectorTools = () => {
+interface SectorToolsProps {
+  onDefineBoundary?: () => void;
+}
+
+const SectorTools = ({ onDefineBoundary }: SectorToolsProps) => {
   return (
     <div className="space-y-2 bg-white shadow-sm border border-border rounded-xl">
       
@@ -9,7 +13,10 @@ const SectorTools = () => {
         </p>
 
         <div className="flex flex-col gap-3">
-          <button className="px-4 py-2 text-sm cursor-pointer border border-border rounded-md">
+          <button
+            onClick={onDefineBoundary}
+            className="px-4 py-2 text-sm cursor-pointer border border-border rounded-md hover:bg-gray-50"
+          >
             Define Forest Boundary
           </button>
 
