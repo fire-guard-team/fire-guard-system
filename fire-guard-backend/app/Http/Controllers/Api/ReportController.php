@@ -186,8 +186,8 @@ class ReportController extends Controller
 
         return match (strtolower($format)) {
             'csv' => $this->exportCsv($mergedData, $timeRange, $reportType),
-            'excel' => $this->exportCsv($mergedData, $timeRange, $reportType, 'xlsx'), // Excel can open CSV
-            'pdf' => $this->exportCsv($mergedData, $timeRange, $reportType, 'pdf'), // For now, return CSV
+            'excel' => $this->exportExcel($mergedData, $timeRange, $reportType),
+            'pdf' => $this->exportPdf($mergedData, $timeRange, $reportType),
             default => response()->json(['error' => 'Invalid format'], 400),
         };
     }
@@ -195,13 +195,13 @@ class ReportController extends Controller
     /**
      * Export data as CSV
      */
-    private function exportCsv(array $data, string $timeRange, string $reportType, string $extension = 'csv'): StreamedResponse
+    private function exportCsv(array $data, string $timeRange, string $reportType): StreamedResponse
     {
-        $filename = "reports_export_{$timeRange}_{$reportType}_" . Carbon::now()->format('Y-m-d') . ".{$extension}";
+        $filename = "reports_export_{$timeRange}_{$reportType}_" . Carbon::now()->format('Y-m-d') . ".csv";
 
         return response()->streamDownload(function () use ($data) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8 (helps Excel open UTF-8 CSV correctly)
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
@@ -217,9 +217,162 @@ class ReportController extends Controller
 
             fclose($file);
         }, $filename, [
-            'Content-Type' => $extension === 'pdf' ? 'application/pdf' : 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
+    }
+
+    /**
+     * Export data as Excel (CSV with Excel formatting)
+     */
+    private function exportExcel(array $data, string $timeRange, string $reportType): StreamedResponse
+    {
+        $filename = "reports_export_{$timeRange}_{$reportType}_" . Carbon::now()->format('Y-m-d') . ".xlsx";
+
+        return response()->streamDownload(function () use ($data) {
+            $file = fopen('php://output', 'w');
+
+            // Add Excel BOM for UTF-8
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
+
+            // Add headers with semicolon separator (Excel format)
+            if (!empty($data)) {
+                fputcsv($file, array_keys($data[0]), ';');
+            }
+
+            // Add data rows with semicolon separator
+            foreach ($data as $row) {
+                fputcsv($file, $row, ';');
+            }
+
+            fclose($file);
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    /**
+     * Export data as PDF (simplified CSV for now - can be enhanced with proper PDF library)
+     */
+    private function exportPdf(array $data, string $timeRange, string $reportType): StreamedResponse
+    {
+        $filename = "reports_export_{$timeRange}_{$reportType}_" . Carbon::now()->format('Y-m-d') . ".pdf";
+
+        return response()->streamDownload(function () use ($data, $timeRange, $reportType) {
+            // Create a simple text-based PDF-like format
+            $content = $this->generateSimplePdf($data, $timeRange, $reportType);
+            echo $content;
+        }, $filename, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    /**
+     * Generate simple PDF-like content
+     */
+    private function generateSimplePdf(array $data, string $timeRange, string $reportType): string
+    {
+        $content = "%PDF-1.4\n";
+        $content .= "1 0 obj\n";
+        $content .= "<<\n";
+        $content .= "/Type /Catalog\n";
+        $content .= "/Pages 2 0 R\n";
+        $content .= ">>\n";
+        $content .= "endobj\n";
+
+        $content .= "2 0 obj\n";
+        $content .= "<<\n";
+        $content .= "/Type /Pages\n";
+        $content .= "/Kids [3 0 R]\n";
+        $content .= "/Count 1\n";
+        $content .= ">>\n";
+        $content .= "endobj\n";
+
+        $content .= "3 0 obj\n";
+        $content .= "<<\n";
+        $content .= "/Type /Page\n";
+        $content .= "/Parent 2 0 R\n";
+        $content .= "/MediaBox [0 0 612 792]\n";
+        $content .= "/Contents 4 0 R\n";
+        $content .= "/Resources <<\n";
+        $content .= "/Font <<\n";
+        $content .= "/F1 <<\n";
+        $content .= "/Type /Font\n";
+        $content .= "/Subtype /Type1\n";
+        $content .= "/BaseFont /Helvetica\n";
+        $content .= ">>\n";
+        $content .= ">>\n";
+        $content .= ">>\n";
+        $content .= ">>\n";
+        $content .= "endobj\n";
+
+        $content .= "4 0 obj\n";
+        $content .= "<<\n";
+        $content .= "/Length " . strlen($this->generatePdfContent($data, $timeRange, $reportType)) . "\n";
+        $content .= ">>\n";
+        $content .= "stream\n";
+        $content .= $this->generatePdfContent($data, $timeRange, $reportType);
+        $content .= "\nendstream\n";
+        $content .= "endobj\n";
+
+        $content .= "xref\n";
+        $content .= "0 5\n";
+        $content .= "0000000000 65535 f \n";
+        $content .= "0000000009 00000 n \n";
+        $content .= "0000000058 00000 n \n";
+        $content .= "0000000115 00000 n \n";
+        $content .= "0000000274 00000 n \n";
+        $content .= "trailer\n";
+        $content .= "<<\n";
+        $content .= "/Size 5\n";
+        $content .= "/Root 1 0 R\n";
+        $content .= ">>\n";
+        $content .= "startxref\n";
+        $content .= "0\n";
+        $content .= "%%EOF\n";
+
+        return $content;
+    }
+
+    /**
+     * Generate PDF content stream
+     */
+    private function generatePdfContent(array $data, string $timeRange, string $reportType): string
+    {
+        $content = "BT\n";
+        $content .= "/F1 12 Tf\n";
+        $content .= "50 750 Td\n";
+        $content .= "(Forest Fire Monitoring Report) Tj\n";
+        $content .= "0 -20 Td\n";
+        $content .= "(Time Range: {$timeRange}, Report Type: {$reportType}) Tj\n";
+        $content .= "0 -30 Td\n";
+        $content .= "(Generated: " . Carbon::now()->format('Y-m-d H:i:s') . ") Tj\n";
+        $content .= "0 -40 Td\n";
+
+        if (!empty($data)) {
+            // Headers
+            $headers = array_keys($data[0]);
+            foreach ($headers as $i => $header) {
+                $content .= "0 -20 Td\n";
+                $content .= "(" . $header . ") Tj\n";
+            }
+
+            // Data
+            $content .= "0 -20 Td\n";
+            foreach ($data as $row) {
+                foreach ($row as $value) {
+                    $content .= "(" . $value . ") Tj\n";
+                    $content .= "100 0 Td\n";
+                }
+                $content .= "0 -15 Td\n";
+                $content .= "-" . (count($row) * 100) . " 0 Td\n";
+            }
+        }
+
+        $content .= "ET\n";
+        return $content;
     }
 
 }

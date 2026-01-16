@@ -101,19 +101,16 @@ export default function ProjectBoundaryModal({
     })();
   }, [open]);
 
-  // Setup Leaflet Draw
   useEffect(() => {
     if (!open) return;
     if (!mapRef.current) return;
 
     const map = mapRef.current;
 
-    // Create FG
     const drawn = new L.FeatureGroup();
     drawn.addTo(map);
     drawnRef.current = drawn;
 
-    // Add existing boundary as editable layer
     if (existingGeom) {
       const layer = L.geoJSON(existingGeom as any, {
         style: { color: "#3b82f6", weight: 3, fillOpacity: 0.05 },
@@ -143,7 +140,6 @@ export default function ProjectBoundaryModal({
     map.addControl(ctrl);
 
     const onCreated = (e: any) => {
-      // keep single polygon: clear then add
       drawn.clearLayers();
       drawn.addLayer(e.layer);
     };
@@ -167,23 +163,19 @@ export default function ProjectBoundaryModal({
     try {
       let geom: any = null;
 
-      // Otherwise: take drawn layer
       if (drawnRef.current && (drawnRef.current as any).getLayers?.().length) {
         const fc = drawnRef.current.toGeoJSON() as any;
-        // Expect FeatureCollection
         const asAny: any = fc;
         const first = asAny?.features?.[0];
         geom = normalizeGeometry(first);
       }
 
-      // If user explicitly edited/pasted GeoJSON, override drawn geometry.
       if (geoJsonTouched && rawGeoJsonText.trim()) {
         try {
           const parsed = JSON.parse(rawGeoJsonText);
           const fromText = normalizeGeometry(parsed);
           if (fromText) geom = fromText;
         } catch {
-          // ignore parse errors here; validation below will catch missing geom
         }
       }
 
@@ -192,7 +184,6 @@ export default function ProjectBoundaryModal({
       }
 
       await apiService.updateCurrentProjectAreaBoundary(geom);
-      // notify maps to reload project area
       window.dispatchEvent(new Event("project-area-updated"));
       onSaved?.();
       onClose();
@@ -256,7 +247,6 @@ export default function ProjectBoundaryModal({
               style={{ height: "100%", width: "100%" }}
               whenReady={(e) => {
                 mapRef.current = e.target;
-                // Fit to existing bbox if present
                 const bbox = projectArea?.bbox;
                 if (bbox) {
                   e.target.fitBounds(

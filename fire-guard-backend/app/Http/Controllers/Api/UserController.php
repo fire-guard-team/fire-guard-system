@@ -21,41 +21,46 @@ class UserController extends Controller
             return $user;
         }
 
-        // If DB already contains a full URL, use it as-is.
         if (str_starts_with($avatar, 'http://') || str_starts_with($avatar, 'https://')) {
             $user->avatar_url = $avatar;
             return $user;
         }
 
-        $host = request()->getSchemeAndHttpHost(); // e.g. http://localhost:8000
+        $host = request()->getSchemeAndHttpHost();
 
-        // Normalize common stored values to a "public disk" path.
-        // We want something like: avatars/xxx.png (stored on disk "public")
+        if (str_starts_with($avatar, 'storage/app/public/')) {
+            $normalized = substr($normalized, strlen('storage/app/public/'));
+        }
+
+        if (str_starts_with($avatar, 'public/')) {
+            $normalized = substr($normalized, strlen('public/'));
+        }
+
+        if (str_starts_with($avatar, 'storage/')) {
+            $user->avatar_url = $host . '/' . $normalized;
+        }
+
+        if (str_starts_with($avatar, '/storage/')) {
         $normalized = ltrim($avatar, '/');
 
-        // If someone stored full local-ish path: storage/app/public/avatars/xxx.png
         if (str_starts_with($normalized, 'storage/app/public/')) {
             $normalized = substr($normalized, strlen('storage/app/public/')); // -> avatars/xxx.png
         }
 
-        // If someone stored: public/avatars/xxx.png
         if (str_starts_with($normalized, 'public/')) {
             $normalized = substr($normalized, strlen('public/')); // -> avatars/xxx.png
         }
 
-        // If DB contains a public URL path like: storage/avatars/xxx.png
         if (str_starts_with($normalized, 'storage/')) {
             $user->avatar_url = $host . '/' . $normalized; // -> http://host/storage/avatars/xxx.png
             return $user;
         }
 
-        // If DB contains a public URL path like: /storage/avatars/xxx.png
         if (str_starts_with($avatar, '/storage/')) {
             $user->avatar_url = $host . $avatar;
             return $user;
         }
 
-        // Otherwise treat it as storage path like avatars/filename.webp
         $publicPath = Storage::disk('public')->url($normalized); // usually /storage/avatars/...
         $user->avatar_url = str_starts_with($publicPath, 'http')
             ? $publicPath
@@ -118,6 +123,7 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'role_id' => ['nullable', 'exists:roles,id'],
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'status' => ['required', 'in:active,inactive'],
         ]);
 
         $avatarPath = null;
@@ -131,6 +137,7 @@ class UserController extends Controller
             'password' => Hash::make($validated['password']),
             'role_id' => $validated['role_id'] ?? null,
             'avatar' => $avatarPath,
+            'status' => $validated['status'],
             // Admin creates users directly (no invitation flow)
             'email_verified_at' => now(),
         ]);
@@ -152,6 +159,7 @@ class UserController extends Controller
             'password' => ['sometimes', 'string', 'min:8', 'confirmed'],
             'role_id' => ['nullable', 'exists:roles,id'],
             'avatar' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'status' => ['sometimes', 'required', 'in:active,inactive'],
         ]);
 
         if (isset($validated['password'])) {

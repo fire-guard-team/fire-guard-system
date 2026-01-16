@@ -1,20 +1,11 @@
-import { useState, useEffect } from "react";
-import type { FC } from "react";
-import { FaTimes } from "react-icons/fa";
+import { useEffect, useState } from "react";
 import { apiService } from "../../../utils/api";
-
-interface Role {
-  id: number;
-  role: string;
-  name: string;
-}
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface User {
   id: number;
   name: string;
   email: string;
-  avatar?: string | null;
-  avatar_url?: string | null;
   role_id?: number | null;
   role?: {
     id: number;
@@ -23,275 +14,375 @@ interface User {
   } | null;
 }
 
+interface Role {
+  id: number;
+  role: string;
+  name: string;
+}
+
 interface AddUserModalProps {
   open: boolean;
   onClose: () => void;
-  onUserAdded?: () => void;
+  onUserAdded: () => void;
   user?: User | null;
 }
 
-const AddUserModal: FC<AddUserModalProps> = ({ open, onClose, onUserAdded, user }) => {
-  const isEditMode = !!user;
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string>("");
-  const [roleId, setRoleId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+const AddUserModal: React.FC<AddUserModalProps> = ({
+  open,
+  onClose,
+  onUserAdded,
+  user = null,
+}) => {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    password_confirmation: "",
+    role_id: "",
+    avatar: null as File | null,
+    status: "active"
+  });
   const [roles, setRoles] = useState<Role[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+
+  const isEditing = !!user;
 
   useEffect(() => {
     if (open) {
       loadRoles();
-      if (isEditMode && user) {
-        // Fill form with current user data
-        setName(user.name || "");
-        setEmail(user.email || "");
-        setRoleId(user.role_id || user.role?.id || null);
-        setPassword("");
-        setPasswordConfirmation("");
-        setAvatarFile(null);
-        setAvatarPreviewUrl(user.avatar_url || user.avatar || "");
-        setError("");
-      } else {
-        // Reset form when modal opens for adding new user
-        setName("");
-        setEmail("");
-        setPassword("");
-        setPasswordConfirmation("");
-        setAvatarFile(null);
-        setAvatarPreviewUrl("");
-        setRoleId(null);
-        setError("");
-      }
+      resetForm();
+      setErrors({});
     }
-  }, [open, isEditMode, user]);
+  }, [open, user]);
 
-  useEffect(() => {
-    if (!open) return;
-    if (!avatarFile) return;
-
-    const url = URL.createObjectURL(avatarFile);
-    setAvatarPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [open, avatarFile]);
+  const resetForm = () => {
+    if (user) {
+      setFormData({
+        name: user.name,
+        email: user.email,
+        password: "",
+        password_confirmation: "",
+        role_id: user.role_id?.toString() || "",
+        avatar: null,
+        status: "active"
+      });
+    } else {
+      setFormData({
+        name: "",
+        email: "",
+        password: "",
+        password_confirmation: "",
+        role_id: "",
+        avatar: null,
+        status: "active",
+      });
+    }
+  };
 
   const loadRoles = async () => {
     try {
       const response = await apiService.getRoles();
-      setRoles(response || []);
+      setRoles(response.data || []);
     } catch (error) {
       console.error("Error loading roles:", error);
-      setRoles([]);
+      setRoles([
+        { id: 1, role: 'admin', name: 'Administrator' },
+        { id: 2, role: 'user', name: 'User' }
+      ]);
     }
   };
 
-  if (!open) return null;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
-    if (!name.trim() || !email.trim()) {
-      setError("Please fill in all required fields");
-      return;
-    }
-
-    if (!isEditMode && !password.trim()) {
-      setError("Password is required for new users");
-      return;
-    }
-
-    if (password && password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
-    }
-
-    if (password && password !== passwordConfirmation) {
-      setError("Password confirmation does not match");
-      return;
-    }
-
     setLoading(true);
+    setErrors({});
+
+    const newErrors: Record<string, string[]> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = ["Name is required"];
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = ["Email is required"];
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = ["Please enter a valid email address"];
+    }
+
+    if (!formData.role_id) {
+      newErrors.role_id = ["Role is required"];
+    }
+
+    if (!formData.status) {
+      newErrors.status = ["Status is required"];
+    }
+
+    if (!isEditing && !formData.avatar) {
+      newErrors.avatar = ["Profile picture is required"];
+    }
+
+    if (!isEditing) {
+      if (!formData.password) {
+        newErrors.password = ["Password is required"];
+      } else if (formData.password.length < 8) {
+        newErrors.password = ["Password must be at least 8 characters"];
+      }
+
+      if (formData.password !== formData.password_confirmation) {
+        newErrors.password_confirmation = ["Passwords do not match"];
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setLoading(false);
+      return;
+    }
+
     try {
-      const formData = new FormData();
-      formData.append("name", name.trim());
-      formData.append("email", email.trim());
-      if (roleId) formData.append("role_id", String(roleId));
-
-      if (password) {
-        formData.append("password", password);
-        formData.append("password_confirmation", passwordConfirmation);
-      }
-
-      if (avatarFile) {
-        formData.append("avatar", avatarFile);
-      }
-
-      if (isEditMode && user) {
-        await apiService.updateUser(user.id, formData);
+      if (isEditing && user) {
+        const updateData = {
+          name: formData.name,
+          email: formData.email,
+          role_id: formData.role_id ? parseInt(formData.role_id) : undefined,
+          status: formData.status,
+        };
+        await apiService.updateUser(user.id, updateData);
       } else {
-        await apiService.createUser(formData);
+        const formDataToSend = new FormData();
+        formDataToSend.append('name', formData.name);
+        formDataToSend.append('email', formData.email);
+        formDataToSend.append('password', formData.password);
+        formDataToSend.append('password_confirmation', formData.password_confirmation);
+        formDataToSend.append('role_id', formData.role_id);
+        formDataToSend.append('status', formData.status);
+        if (formData.avatar) {
+          formDataToSend.append('avatar', formData.avatar);
+        }
+
+        await apiService.createUser(formDataToSend);
       }
-      
-      onUserAdded?.();
-      onClose();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : (isEditMode ? "Failed to update user" : "Failed to add user");
-      setError(errorMessage);
+
+      onUserAdded();
+    } catch (error: any) {
+      if (error.response?.data?.errors) {
+        setErrors(error.response.data.errors);
+      } else {
+        console.error("Error saving user:", error);
+        const errorMessage = error.response?.data?.message ||
+          (isEditing ? "Failed to update user. Please try again." : "Failed to create user. Please try again.");
+        alert(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleInputChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: [] }));
+    }
+  };
+
+  if (!open) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
+    <div className="fixed inset-0 z-[9999] overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div
+          className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
+          onClick={onClose}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
+        ></div>
 
-      <div className="relative bg-white rounded-xl shadow-lg w-full max-w-md p-6 space-y-6 z-10 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{isEditMode ? "Edit User" : "Add New User"}</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
-          >
-            <FaTimes />
-          </button>
-        </div>
-
-        {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Avatar (Optional)</label>
-            <div className="flex items-center gap-4">
-              <div className="h-12 w-12 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
-                {avatarPreviewUrl ? (
-                  <img
-                    src={avatarPreviewUrl}
-                    alt="Avatar preview"
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="text-gray-500 text-sm font-semibold">
-                    {name?.trim()?.[0]?.toUpperCase() || "U"}
-                  </span>
-                )}
-              </div>
-
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0] || null;
-                  setAvatarFile(file);
-                }}
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
-              />
+        <div
+          className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-2xl border-2 border-blue-500 rounded-2xl"
+          style={{ position: 'relative', zIndex: 10000 }}
+        >
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium leading-6 text-gray-900">
+              {isEditing ? "Edit User" : "Add New User"}
+            </h3>
+            <div className="mt-2 text-sm text-green-600 font-bold">
+              ✅ Modal is visible - Debug mode active
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none"
-              placeholder="e.g. John Doe"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Email <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none"
-              placeholder="e.g. john@example.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Password {!isEditMode && <span className="text-red-500">*</span>}
-              {isEditMode && <span className="text-gray-500 text-xs">(Leave empty to keep current password)</span>}
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none"
-              placeholder={isEditMode ? "Enter new password (optional)" : "Enter password"}
-              minLength={isEditMode ? undefined : 8}
-              required={!isEditMode}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Password Confirmation {!isEditMode && <span className="text-red-500">*</span>}
-            </label>
-            <input
-              type="password"
-              value={passwordConfirmation}
-              onChange={(e) => setPasswordConfirmation(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none"
-              placeholder={isEditMode ? "Confirm new password (optional)" : "Confirm password"}
-              required={!isEditMode}
-              disabled={isEditMode && !password}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1">Role (Optional)</label>
-            <select
-              value={roleId || ""}
-              onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : null)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-green-400 outline-none"
+            <button
+              onClick={() => {
+                console.log("Close button clicked in modal");
+                onClose();
+              }}
+              className="text-gray-400 hover:text-gray-600 transition-colors border border-gray-300 rounded p-1"
             >
-              <option value="">Select a role</option>
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
+              <XMarkIcon className="w-6 h-6" />
+            </button>
           </div>
-        </form>
 
-        <div className="flex justify-end gap-3 pt-4 border-t">
-          <button
-            onClick={onClose}
-            type="button"
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
+          <form
+            onSubmit={(e) => {
+              console.log("Form submitted");
+              handleSubmit(e);
+            }}
+            className="space-y-4 border border-yellow-300 p-2 rounded"
           >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            className="px-4 py-2 text-sm rounded-lg bg-green-500 text-white font-semibold disabled:opacity-50"
-          >
-            {loading ? (isEditMode ? "Updating..." : "Adding...") : (isEditMode ? "Update User" : "Add User")}
-          </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600">{errors.name[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email[0]}</p>
+              )}
+            </div>
+
+            {!isEditing && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Password
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => handleInputChange("password", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={!isEditing}
+                  />
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-red-600">{errors.password[0]}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={formData.password_confirmation}
+                    onChange={(e) => handleInputChange("password_confirmation", e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required={!isEditing}
+                  />
+                  {errors.password_confirmation && (
+                    <p className="mt-1 text-sm text-red-600">{errors.password_confirmation[0]}</p>
+                  )}
+                </div>
+              </>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Role
+              </label>
+              <select
+                value={formData.role_id}
+                onChange={(e) => handleInputChange("role_id", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="">Select Role</option>
+                {roles.map((role) => (
+                  <option key={role.id} value={role.id}>
+                    {role.name}
+                  </option>
+                ))}
+              </select>
+              {errors.role_id && (
+                <p className="mt-1 text-sm text-red-600">{errors.role_id[0]}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => handleInputChange("status", e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                required
+              >
+                <option value="active">Active - Can Login</option>
+                <option value="inactive">Inactive - Cannot Login</option>
+              </select>
+              {errors.status && (
+                <p className="mt-1 text-sm text-red-600">{errors.status[0]}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                Active users can login to the system, inactive users cannot.
+              </p>
+            </div>
+
+            {!isEditing && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Profile Picture
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setFormData(prev => ({ ...prev, avatar: file }));
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required={!isEditing}
+                />
+                {errors.avatar && (
+                  <p className="mt-1 text-sm text-red-600">{errors.avatar[0]}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Upload a profile picture for the user (JPG, PNG, GIF).
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  console.log("Cancel button clicked");
+                  onClose();
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors border border-gray-400"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                onClick={() => console.log("Submit button clicked")}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-blue-400"
+                disabled={loading}
+              >
+                {loading ? "Saving..." : (isEditing ? "Update User" : "Create User")}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

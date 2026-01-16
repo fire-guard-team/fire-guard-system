@@ -24,6 +24,12 @@ class AuthController extends Controller
             ], 401);
         }
 
+        if ($user->status !== 'active') {
+            return response()->json([
+                'message' => 'Your account is inactive. Please contact administrator.'
+            ], 403);
+        }
+
         $token = $user->createToken('dashboard')->plainTextToken;
 
         return response()->json([
@@ -34,7 +40,30 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role ? $user->role->role : null,
                 'avatar' => $user->avatar,
+                'permissions' => $user->getPermissions(),
             ]
+        ]);
+    }
+
+    public function logout(Request $request)
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'message' => 'Logged out successfully'
+        ]);
+    }
+
+    public function getPermissions(Request $request)
+    {
+        $user = $request->user();
+
+        if (!$user) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        return response()->json([
+            'permissions' => $user->getPermissions()
         ]);
     }
 }

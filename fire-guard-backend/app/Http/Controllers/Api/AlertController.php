@@ -9,16 +9,12 @@ use Illuminate\Http\JsonResponse;
 
 class AlertController extends Controller
 {
-    /**
-     * 📌 GET /alerts
-     * قائمة التنبيهات + فلاتر
-     */
+   
     public function index(Request $request): JsonResponse
     {
         $query = Alert::with(['sector', 'sensor', 'event'])
             ->orderByDesc('created_at');
 
-        // 🔍 فلترة حسب الحالة
         if ($request->filled('status')) {
             if ($request->status === 'active') {
                 $query->whereNull('acknowledged_at');
@@ -29,7 +25,6 @@ class AlertController extends Controller
             }
         }
 
-        // 🔍 فلترة حسب المستوى
         if ($request->filled('level')) {
             $query->where('alert_level', $request->level);
         }
@@ -39,10 +34,7 @@ class AlertController extends Controller
         );
     }
 
-    /**
-     * 📌 GET /alerts/{alert}
-     * تفاصيل تنبيه واحد
-     */
+  
     public function show(Alert $alert): JsonResponse
     {
         $alert->load(['sector', 'sensor', 'event']);
@@ -50,10 +42,6 @@ class AlertController extends Controller
         return response()->json($alert);
     }
 
-    /**
-     * 📌 POST /alerts/{alert}/ack
-     * تأكيد قراءة التنبيه
-     */
     public function ack(Alert $alert): JsonResponse
     {
         if ($alert->acknowledged_at) {

@@ -1,4 +1,3 @@
-// src/app/Auth/LogIn.tsx
 import { useNavigate } from "react-router-dom";
 import LoginForm from "../../../components/Auth/LoginForm/LoginForm";
 import { useState } from "react";
@@ -44,12 +43,10 @@ const LogIn = () => {
 
     try {
       const response = await apiService.login(data);
-      
-      // Save token and user data
+
       apiService.setToken(response.token);
       localStorage.setItem("user", JSON.stringify(response.user));
-      
-      // Navigate to dashboard
+
       navigate("/dashboard");
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed. Please try again.";

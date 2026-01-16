@@ -1,13 +1,14 @@
-// src/components/dashboard/layout/SideBar.tsx
 import { useRef, type JSX } from "react";
 import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import MainLogo from "../../ui/MainLogo";
+import PermissionGuard from "../../Auth/PermissionGuard";
 
 interface Items {
   content: string;
   link: string;
   icon: JSX.Element;
+  permission?: string;
 }
 
 interface Props {
@@ -39,27 +40,28 @@ const SideBar = ({ items, isOpen }: Props) => {
         {/* Menu items */}
         <nav className="flex-1 px-3 py-4 space-y-1">
           {items.map((item, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.99 }}
-            >
-              <NavLink
-                to={item.link}
-                end={item.link === "/dashboard"} 
-                className={({ isActive }) =>
-                  [
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors",
-                    isActive
-                      ? "bg-[#F55624] text-white"
-                      : "text-gray-700 hover:bg-second",
-                  ].join(" ")
-                }
+            <PermissionGuard key={index} permission={item.permission}>
+              <motion.div
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
               >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.content}</span>
-              </NavLink>
-            </motion.div>
+                <NavLink
+                  to={item.link}
+                  end={item.link === "/dashboard"}
+                  className={({ isActive }) =>
+                    [
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-colors",
+                      isActive
+                        ? "bg-[#F55624] text-white"
+                        : "text-gray-700 hover:bg-second",
+                    ].join(" ")
+                  }
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  <span>{item.content}</span>
+                </NavLink>
+              </motion.div>
+            </PermissionGuard>
           ))}
         </nav>
       </aside>
@@ -85,22 +87,23 @@ const SideBar = ({ items, isOpen }: Props) => {
 
           <nav className="flex-1 px-3 py-4 space-y-1">
             {items.map((item, index) => (
-              <NavLink
-                key={index}
-                to={item.link}
-                end={item.link === "/dashboard"}
-                className={({ isActive }) =>
-                  [
-                    "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
-                    isActive
-                      ? "bg-[#F55624] text-white"
-                      : "text-gray-700 hover:bg-second",
-                  ].join(" ")
-                }
-              >
-                <span className="text-lg">{item.icon}</span>
-                <span>{item.content}</span>
-              </NavLink>
+              <PermissionGuard key={index} permission={item.permission}>
+                <NavLink
+                  to={item.link}
+                  end={item.link === "/dashboard"}
+                  className={({ isActive }) =>
+                    [
+                      "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-[#F55624] text-white"
+                        : "text-gray-700 hover:bg-second",
+                    ].join(" ")
+                  }
+                >
+                  <span className="text-lg">{item.icon}</span>
+                  <span>{item.content}</span>
+                </NavLink>
+              </PermissionGuard>
             ))}
           </nav>
         </div>

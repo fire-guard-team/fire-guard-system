@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { useState } from "react";
 import SideBar from "../../../components/dashboard/layout/SideBar";
 import NavBar from "../../../components/dashboard/layout/NavBar";
 import { Outlet } from "react-router-dom";
@@ -13,15 +13,11 @@ import {
 } from "react-icons/md";
 import { GiPineTree } from "react-icons/gi";
 
-export const SearchContext = createContext<string>("");
-
 const Dashboard = () => {
-  const [search, setSearch] = useState<string>("");
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-bgMain flex">
-      <SearchContext.Provider value={search}>
         {/* Sidebar */}
         <SideBar
           isOpen={isOpen}
@@ -31,43 +27,50 @@ const Dashboard = () => {
               content: "Dashboard",
               link: "/dashboard",
               icon: <MdOutlineDashboard />,
+              permission: "view_dashboard",
             },
             {
               content: "Interactive Map",
               link: "/dashboard/map",
               icon: <MdOutlineMap />,
+              permission: "view_interactive_map",
             },
             {
               content: "Alerts Center",
               link: "/dashboard/alerts",
               icon: <MdOutlineNotificationsActive />,
+              permission: "view_alerts_center",
             },
             {
               content: "Sensor Management",
               link: "/dashboard/sensors",
               icon: <MdSensors />,
+              permission: "view_sensor_management",
             },
             {
               content: "Forest & Sector Management",
               link: "/dashboard/forest-sectors",
               icon: <GiPineTree />,
+              permission: "view_forest_sectors",
             },
             {
               content: "Reports & Analytics",
               link: "/dashboard/reports",
               icon: <MdOutlineInsights />,
+              permission: "view_reports_analytics",
             },
             {
-              content: "Settings & Users",
-              link: "/dashboard/settings",
+              content: "Manage Users",
+              link: "/dashboard/users",
               icon: <MdOutlineSettings />,
+              permission: "manage_users",
             },
           ]}
         />
 
         {/* Main area */}
         <div className="flex-1 flex flex-col min-h-screen">
-          <NavBar setSearch={setSearch} setIsOpen={setIsOpen} isOpen={isOpen} />
+          <NavBar setIsOpen={setIsOpen} isOpen={isOpen} />
 {/* px-4 py-6 lg:px-8 lg:py-8 */}
           <main className="flex-1">
             <div className="h-full w-full">
@@ -77,7 +80,6 @@ const Dashboard = () => {
             </div>
           </main>
         </div>
-      </SearchContext.Provider>
     </div>
   );
 };

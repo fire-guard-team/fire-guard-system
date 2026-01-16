@@ -3,7 +3,9 @@ import AlertsDeatils from "../../../components/dashboard/AlertsCenter/AlertsDeat
 import FilterAlerts from "../../../components/dashboard/AlertsCenter/FilterAlerts";
 import RecentAlerts from "../../../components/dashboard/AlertsCenter/RecentAlerts";
 import TriggerConditions from "../../../components/dashboard/AlertsCenter/TriggerConditions";
+import AlertNotificationsContainer from "../../../components/dashboard/AlertsCenter/AlertNotificationsContainer";
 import { apiService } from "../../../utils/api";
+import { useAlertManager } from "../../../hooks/useAlertManager";
 
 interface Alert {
   alert_id: number;
@@ -35,35 +37,24 @@ interface AlertFilters {
 }
 
 const AlertsCenter = () => {
-  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<Alert | null>(null);
-  const [loading, setLoading] = useState(false);
   const [filters, setFilters] = useState<AlertFilters>({
     status: "",
     level: "",
   });
   const [currentPage, setCurrentPage] = useState(1);
 
-  const loadAlerts = async () => {
-    setLoading(true);
-    try {
-      const params: any = { page: currentPage };
-      if (filters.status) params.status = filters.status;
-      if (filters.level) params.level = filters.level;
-
-      const response = await apiService.getAlerts(params);
-      setAlerts(response.data || []);
-    } catch (error) {
-      console.error("Error loading alerts:", error);
-      setAlerts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    alerts,
+    notifications,
+    acknowledgeAlert,
+    removeNotification,
+    loadAlerts
+  } = useAlertManager();
 
   useEffect(() => {
     loadAlerts();
-  }, [filters, currentPage]);
+  }, [filters, currentPage, loadAlerts]);
 
   const handleFilterChange = (newFilters: AlertFilters) => {
     setFilters(newFilters);
@@ -81,8 +72,7 @@ const AlertsCenter = () => {
 
   const handleAcknowledge = async (alertId: number) => {
     try {
-      await apiService.acknowledgeAlert(alertId);
-      await loadAlerts();
+      await acknowledgeAlert(alertId);
       if (selectedAlert?.alert_id === alertId) {
         const updatedAlert = await apiService.getAlert(alertId);
         setSelectedAlert(updatedAlert);
@@ -92,22 +82,35 @@ const AlertsCenter = () => {
     }
   };
 
-  return (
-    <div className="grid grid-cols-1 xl:grid-cols-[2fr_3fr] gap-6">
-      <div className="flex flex-col gap-6">
-        <FilterAlerts
-          filters={filters}
-          onFilterChange={handleFilterChange}
-        />
-        <RecentAlerts
-          alerts={alerts}
-          loading={loading}
-          onAlertSelect={handleAlertSelect}
-          selectedAlertId={selectedAlert?.alert_id}
-        />
-      </div>
+  const handleNotificationDismiss = (notificationId: string) => {
+    removeNotification(notificationId);
+  };
 
-      <div className="flex flex-col gap-6">
+  return (
+    <>
+      {/* Alert Notifications */}
+      <AlertNotificationsContainer
+        notifications={notifications}
+        onAcknowledge={handleAcknowledge}
+        onDismiss={handleNotificationDismiss}
+      />
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 xl:grid-cols-[2fr_3fr] gap-6">
+        <div className="flex flex-col gap-6">
+          <FilterAlerts
+            filters={filters}
+            onFilterChange={handleFilterChange}
+          />
+          <RecentAlerts
+            alerts={alerts}
+            loading={false}
+            onAlertSelect={handleAlertSelect}
+            selectedAlertId={selectedAlert?.alert_id}
+          />
+        </div>
+
+        <div className="flex flex-col gap-6">
         <AlertsDeatils
           alert={selectedAlert}
           onAcknowledge={handleAcknowledge}
@@ -115,6 +118,7 @@ const AlertsCenter = () => {
         <TriggerConditions alert={selectedAlert} />
       </div>
     </div>
+    </>
   );
 };
 

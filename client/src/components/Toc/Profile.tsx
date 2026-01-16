@@ -1,4 +1,3 @@
-// Import Dependencies
 import React from "react";
 import {
   Popover,
@@ -12,11 +11,11 @@ import {
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 import { TbCoins, TbUser, TbUsersGroup } from "react-icons/tb";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarDot, type AvatarColor } from "../ui/Avatar";
 import { Button } from "../ui/Button";
+import { apiService } from "../../utils/api";
 
-// ----------------------------------------------------------------------
 
 interface LinkItem {
   id: string;
@@ -71,6 +70,19 @@ const links: LinkItem[] = [
 ];
 
 export function Profile() {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await apiService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      apiService.removeToken();
+      navigate('/login');
+    }
+  };
+
   return (
     <Popover className="relative flex">
       <PopoverButton as="button" className="relative cursor-pointer outline-none focus:outline-none focus:ring-0">
@@ -140,7 +152,10 @@ export function Profile() {
                 ))}
 
                 <div className="px-4 pt-4">
-                  <Button className="w-full gap-2">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={handleLogout}
+                  >
                     <ArrowLeftStartOnRectangleIcon className="w-4 h-4" />
                     <span>Logout</span>
                   </Button>

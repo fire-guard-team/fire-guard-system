@@ -1,4 +1,3 @@
-// API Configuration
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 export interface LoginResponse {
@@ -47,7 +46,6 @@ class ApiService {
       ...options,
     };
 
-    // Add auth token if available
     const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers = {
@@ -82,7 +80,12 @@ class ApiService {
     });
   }
 
-  // Alerts API
+  async logout(): Promise<any> {
+    return this.request('/auth/logout', {
+      method: 'POST',
+    });
+  }
+
   async getAlerts(params?: { status?: string; level?: string; page?: number }): Promise<any> {
     const queryParams = new URLSearchParams();
     if (params?.status) queryParams.append('status', params.status);
@@ -109,7 +112,6 @@ class ApiService {
     return this.request('/v1/alerts/stats/summary');
   }
 
-  // Sensors API
   async getSensors(params?: { status?: string; type?: string; sector_id?: number; page?: number }): Promise<any> {
     const queryParams = new URLSearchParams();
     if (params?.status) queryParams.append('status', params.status);
@@ -162,16 +164,21 @@ class ApiService {
     return this.request(endpoint);
   }
 
-  // Sectors API
   async getSectors(): Promise<any> {
     return this.request('/v1/sectors');
+  }
+
+  async createSector(data: { name: string; boundary: any; status?: string }): Promise<any> {
+    return this.request('/v1/sectors', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async getSectorsGeo(): Promise<any> {
     return this.request('/v1/sectors/geo');
   }
 
-  // Project Areas API
   async getCurrentProjectArea(): Promise<any> {
     return this.request('/v1/project-areas/current');
   }
@@ -183,7 +190,6 @@ class ApiService {
     });
   }
 
-  // Map overlays
   async getSensorsGeo(): Promise<any> {
     return this.request('/v1/sensors/geo');
   }
@@ -196,7 +202,6 @@ class ApiService {
     return this.request('/v1/map/historical-fires');
   }
 
-  // Reports API
   async getReportsAnalytics(params?: { time_range?: string; report_type?: string }): Promise<any> {
     const queryParams = new URLSearchParams();
     if (params?.time_range) queryParams.append('time_range', params.time_range);
@@ -241,7 +246,6 @@ class ApiService {
       const link = document.createElement('a');
       link.href = downloadUrl;
       
-      // Get filename from Content-Disposition header or use default
       const contentDisposition = response.headers.get('Content-Disposition');
       let filename = `report.${format}`;
       if (contentDisposition) {
@@ -262,7 +266,6 @@ class ApiService {
     }
   }
 
-  // Roles API
   async getRoles(): Promise<any> {
     return this.request('/v1/roles');
   }
@@ -287,7 +290,6 @@ class ApiService {
     });
   }
 
-  // Settings API
   async getSettings(): Promise<any> {
     return this.request('/v1/settings');
   }
@@ -299,7 +301,6 @@ class ApiService {
     });
   }
 
-  // Users API
   async getUsers(params?: { search?: string; role_id?: number; page?: number }): Promise<any> {
     const queryParams = new URLSearchParams();
     if (params?.search) queryParams.append('search', params.search);
@@ -332,7 +333,6 @@ class ApiService {
 
   async updateUser(userId: number, data: FormData | { name?: string; email?: string; password?: string; password_confirmation?: string; role_id?: number }): Promise<any> {
     if (data instanceof FormData) {
-      // PUT multipart can be flaky in some setups, so we spoof method via POST.
       data.append('_method', 'PUT');
       return this.request(`/v1/users/${userId}`, {
         method: 'POST',
@@ -352,22 +352,38 @@ class ApiService {
     });
   }
 
-  // Helper method to get token
+  async getDashboardStats(): Promise<any> {
+    return this.request('/v1/dashboard/stats');
+  }
+
+  async getDashboardLiveSensorData(): Promise<any> {
+    return this.request('/v1/dashboard/live-sensor-data');
+  }
+
+  async getDashboardRecentAlerts(): Promise<any> {
+    return this.request('/v1/dashboard/recent-alerts');
+  }
+
+  async getDashboardRiskDistribution(): Promise<any> {
+    return this.request('/v1/dashboard/risk-distribution');
+  }
+
+  async getUserPermissions(): Promise<string[]> {
+    return this.request('/v1/auth/permissions');
+  }
+
   getToken(): string | null {
     return localStorage.getItem('auth_token');
   }
 
-  // Helper method to set token
   setToken(token: string): void {
     localStorage.setItem('auth_token', token);
   }
 
-  // Helper method to remove token
   removeToken(): void {
     localStorage.removeItem('auth_token');
   }
 
-  // Helper method to check if user is authenticated
   isAuthenticated(): boolean {
     return !!this.getToken();
   }

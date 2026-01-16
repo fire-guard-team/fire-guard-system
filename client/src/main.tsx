@@ -13,8 +13,10 @@ import AlertsCenter from "./app/pages/Dashboard/AlertsCenter.tsx";
 import SensorManagement from "./app/pages/Dashboard/SensorManagement.tsx";
 import ForestSectors from "./app/pages/Dashboard/ForestSectors.tsx";
 import Reports from "./app/pages/Dashboard/Reports.tsx";
-import Settings from "./app/pages/Dashboard/Settings.tsx";
+import UsersManagement from "./app/pages/Dashboard/UsersManagement.tsx";
 import DashboardOverview from "./app/pages/Dashboard/DashboardOverview.tsx";
+import AuthGuard from "./components/Auth/AuthGuard.tsx";
+import RouteGuard from "./components/Auth/RouteGuard.tsx";
 
 const routes = createBrowserRouter([
   {
@@ -26,6 +28,10 @@ const routes = createBrowserRouter([
         element: <LogIn />,
       },
       {
+        path: "login",
+        element: <LogIn />,
+      },
+      {
         path: "forget-password",
         element: <ForgetPassword />,
       },
@@ -33,35 +39,39 @@ const routes = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    element: <Dashboard />,
+    element: (
+      <AuthGuard>
+        <Dashboard />
+      </AuthGuard>
+    ),
     children:[
       {
         path:"",
-        element : <DashboardOverview />
+        element : <RouteGuard permission="view_dashboard"><DashboardOverview /></RouteGuard>
       },
       {
         path:"map",
-        element : <InteractiveMap />
+        element : <RouteGuard permission="view_interactive_map"><InteractiveMap /></RouteGuard>
       },
       {
         path:"alerts",
-        element : <AlertsCenter />
+        element : <RouteGuard permission="view_alerts_center"><AlertsCenter /></RouteGuard>
       },
       {
         path:"sensors",
-        element : <SensorManagement />
+        element : <RouteGuard permission="view_sensor_management"><SensorManagement /></RouteGuard>
       },
       {
         path:"forest-sectors",
-        element : <ForestSectors />
+        element : <RouteGuard permission="view_forest_sectors"><ForestSectors /></RouteGuard>
       },
       {
         path:"reports",
-        element : <Reports />
+        element : <RouteGuard permission="view_reports_analytics"><Reports /></RouteGuard>
       },
       {
-        path:"settings",
-        element : <Settings />
+        path:"users",
+        element : <RouteGuard permission="manage_users"><UsersManagement /></RouteGuard>
       },
     ]
   },

@@ -1,6 +1,5 @@
-// src/components/maps/RiskMap.tsx
 import type { FC } from "react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   MapContainer,
   TileLayer,
@@ -14,18 +13,23 @@ import {
 } from "react-leaflet";
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import L from "leaflet";
+import "leaflet-draw/dist/leaflet.draw.css";
+import "leaflet-draw";
 import { apiService } from "../../utils/api";
 
 const center: LatLngExpression = [34.8, 36.3];
 
 interface RiskMapProps {
-  className?: string; 
+  className?: string;
+  drawingMode?: boolean;
+  onPolygonDrawn?: (polygon: any) => void;
+  onDrawingCanceled?: () => void;
 }
 
 type ProjectAreaResponse = {
   id: number;
   name: string;
-  boundary: any; // GeoJSON geometry (object or string)
+  boundary: any;
   bbox: { min_lat: number; min_lng: number; max_lat: number; max_lng: number };
 };
 
@@ -33,7 +37,7 @@ type SectorGeo = {
   sector_id: number;
   name: string;
   status: string;
-  boundary: any; // GeoJSON geometry (object or string)
+  boundary: any;
 };
 
 type SensorGeo = {
@@ -89,7 +93,6 @@ type HistoricalFire = {
 function normalizeGeoJsonGeometry(input: any): any | null {
   if (!input) return null;
 
-  // If backend returns json as string, parse it.
   if (typeof input === "string") {
     try {
       const parsed = JSON.parse(input);
@@ -99,7 +102,6 @@ function normalizeGeoJsonGeometry(input: any): any | null {
     }
   }
 
-  // Some DB drivers might return { type: '...', coordinates: ... } already.
   if (typeof input === "object" && typeof input.type === "string") {
     return input;
   }
@@ -136,18 +138,109 @@ const WmsOverlay = ({
   return null;
 };
 
+const DrawingControls = ({
+  enabled,
+  onPolygonDrawn,
+  onDrawingCanceled,
+}: {
+  enabled: boolean;
+  onPolygonDrawn?: (polygon: any) => void;
+  onDrawingCanceled?: () => void;
+}) => {
+  console.log('DrawingControls props:', { enabled, hasOnPolygonDrawn: !!onPolygonDrawn });
+  const map = useMap();
+
+  useEffect(() => {
+    console.log('DrawingControls enabled changed:', enabled);
+    if (!enabled) return;
+
+    const drawControl = new (L.Control as any).Draw({
+      draw: {
+        polyline: false,
+        polygon: {
+          allowIntersection: false,
+          showArea: true,
+          drawError: {
+            color: '#e74c3c',
+            message: '<strong>خطأ:</strong> لا يمكن أن تتقاطع الحدود!'
+          },
+          shapeOptions: {
+            color: '#3b82f6',
+            weight: 2,
+            fillColor: '#3b82f6',
+            fillOpacity: 0.1
+          }
+        },
+        rectangle: false,
+        circle: false,
+        marker: false,
+        circlemarker: false,
+      },
+      edit: {
+        featureGroup: new L.FeatureGroup(),
+        remove: false,
+        edit: false,
+      },
+    });
+
+    map.addControl(drawControl);
+
+    const handleDrawCreated = (e: any) => {
+      console.log('Draw created event fired');
+      const layer = e.layer;
+      const geoJson = layer.toGeoJSON();
+      console.log('GeoJSON created:', geoJson);
+
+      map.eachLayer((layer) => {
+        if (layer instanceof L.Polygon && (layer as any)._drawnByUser) {
+          map.removeLayer(layer);
+        }
+      });
+
+      (layer as any)._drawnByUser = true;
+      layer.addTo(map);
+
+      console.log('Polygon drawn:', geoJson.geometry);
+      console.log('Calling onPolygonDrawn callback:', !!onPolygonDrawn);
+      onPolygonDrawn?.(geoJson.geometry);
+      console.log('onPolygonDrawn callback called');
+    };
+
+    const handleDrawCancel = () => {
+      onDrawingCanceled?.();
+    };
+
+    map.on((L.Draw as any).Event.CREATED, handleDrawCreated);
+    map.on((L.Draw as any).Event.DRAWSTOP, handleDrawCancel);
+
+    return () => {
+      map.removeControl(drawControl);
+      map.off((L.Draw as any).Event.CREATED, handleDrawCreated);
+      map.off((L.Draw as any).Event.DRAWSTOP, handleDrawCancel);
+    };
+  }, [map, enabled, onPolygonDrawn, onDrawingCanceled]);
+
+  return null;
+};
+
 const FitAndRender = ({
   projectArea,
   sectors,
   sensors,
   alerts,
   historicalFires,
+  drawingMode,
+  onPolygonDrawn,
+  onDrawingCanceled,
 }: {
   projectArea: ProjectAreaResponse | null;
   sectors: SectorGeo[];
   sensors: SensorGeo[];
   alerts: MapAlerts | null;
   historicalFires: HistoricalFire[];
+  drawingMode?: boolean;
+  onPolygonDrawn?: (polygon: any) => void;
+  onDrawingCanceled?: () => void;
 }) => {
   const map = useMap();
 
@@ -209,8 +302,22 @@ const FitAndRender = ({
     return { color, weight: 2, fillColor: color, fillOpacity: 0.15 };
   };
 
-  const sensorColor = (status: string) => {
-    switch (status) {
+  const sensorColor = (sensor: any) => {
+    const temperature = sensor.last_temperature;
+    const humidity = sensor.last_humidity;
+    const smokeLevel = sensor.last_smoke_level;
+
+    if (temperature && temperature > 80) {
+      return "#ef4444";
+    }
+    if (smokeLevel && smokeLevel > 2.0) {
+      return "#f59e0b";
+    }
+    if (humidity && humidity < 20) {
+      return "#f59e0b";
+    }
+
+    switch (sensor.status) {
       case "active":
         return "#10b981";
       case "offline":
@@ -287,31 +394,44 @@ const FitAndRender = ({
               <CircleMarker
                 key={s.sensor_id}
                 center={[s.lat, s.lng]}
-                radius={7}
+                radius={8}
                 pathOptions={{
-                  color: sensorColor(s.status),
-                  fillColor: sensorColor(s.status),
+                  color: sensorColor(s),
+                  fillColor: sensorColor(s),
                   fillOpacity: 0.9,
                   weight: 2,
                 }}
               >
                 <Popup>
-                  <div className="space-y-1">
-                    <div className="font-semibold">{s.name}</div>
-                    <div className="text-xs">Type: {s.type}</div>
-                    <div className="text-xs">Sector: {s.sector_name}</div>
-                    <div className="text-xs">Status: {s.status}</div>
+                  <div className="space-y-2">
+                    <div className="font-semibold text-lg">{s.name}</div>
+                    <div className="text-sm text-gray-600">Type: {s.type} • Sector: {s.sector_name}</div>
+
+                    <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                      s.status === 'active' ? 'bg-green-100 text-green-800' :
+                      s.status === 'offline' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {s.status}
+                    </div>
+
+                    <div className="border-t pt-2 space-y-1">
+                      <div className="font-medium text-sm">Latest Readings:</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>Temperature: <span className={s.last_temperature > 80 ? 'text-red-600 font-bold' : ''}>{s.last_temperature ?? "-"} °C</span></div>
+                        <div>Humidity: <span className={s.last_humidity < 20 ? 'text-orange-600 font-bold' : ''}>{s.last_humidity ?? "-"}%</span></div>
+                        <div>Smoke: <span className={s.last_smoke_level > 2.0 ? 'text-orange-600 font-bold' : ''}>{s.last_smoke_level ?? "-"}</span></div>
+                        <div>Battery: {s.battery_level ?? "-"}%</div>
+                      </div>
+                    </div>
+
                     {s.last_reading_at && (
-                      <div className="text-xs">
+                      <div className="text-xs text-gray-500 border-t pt-1">
                         Last reading: {new Date(s.last_reading_at).toLocaleString()}
                       </div>
                     )}
-                    <div className="text-xs">
-                      Temp: {s.last_temperature ?? "-"} °C • Humidity: {s.last_humidity ?? "-"}% • Smoke:{" "}
-                      {s.last_smoke_level ?? "-"} • AQI: {s.last_aqi ?? "-"}
-                    </div>
                     {s.last_seen && (
-                      <div className="text-xs">
+                      <div className="text-xs text-gray-500">
                         Last seen: {new Date(s.last_seen).toLocaleString()}
                       </div>
                     )}
@@ -390,11 +510,22 @@ const FitAndRender = ({
           </LayerGroup>
         </LayersControl.Overlay>
       </LayersControl>
+
+      <DrawingControls
+        enabled={drawingMode || false}
+        onPolygonDrawn={onPolygonDrawn}
+        onDrawingCanceled={onDrawingCanceled}
+      />
     </>
   );
 };
 
-const RiskMap: FC<RiskMapProps> = ({ className }) => {
+const RiskMap: FC<RiskMapProps> = ({ className, drawingMode, onPolygonDrawn, onDrawingCanceled }) => {
+  console.log('RiskMap props:', { drawingMode, hasOnPolygonDrawn: !!onPolygonDrawn, hasOnDrawingCanceled: !!onDrawingCanceled });
+
+  React.useEffect(() => {
+    console.log('drawingMode changed in RiskMap:', drawingMode);
+  }, [drawingMode]);
   const [projectArea, setProjectArea] = useState<ProjectAreaResponse | null>(null);
   const [sectors, setSectors] = useState<SectorGeo[]>([]);
   const [sensors, setSensors] = useState<SensorGeo[]>([]);
@@ -428,7 +559,6 @@ const RiskMap: FC<RiskMapProps> = ({ className }) => {
     };
     loadAll();
 
-    // شبه فوري: تحديث طبقات sensors + alerts كل 10 ثواني
     const t = window.setInterval(async () => {
       try {
         const sensorGeo = await apiService.getSensorsGeo();
@@ -437,12 +567,10 @@ const RiskMap: FC<RiskMapProps> = ({ className }) => {
         setSensors(sensorGeo || []);
         setAlerts(mapAlerts || null);
       } catch (e) {
-        // ignore polling errors
       }
     }, 10000);
 
     const onProjectAreaUpdated = () => {
-      // reload boundary + sectors immediately after save
       loadAll();
     };
     window.addEventListener("project-area-updated", onProjectAreaUpdated);
@@ -472,6 +600,9 @@ const RiskMap: FC<RiskMapProps> = ({ className }) => {
           sensors={sensors}
           alerts={alerts}
           historicalFires={historicalFires}
+          drawingMode={drawingMode}
+          onPolygonDrawn={onPolygonDrawn}
+          onDrawingCanceled={onDrawingCanceled}
         />
       </MapContainer>
     </div>
