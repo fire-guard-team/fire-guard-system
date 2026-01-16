@@ -1,3 +1,4 @@
+// src/components/maps/RiskMap.tsx
 import type { FC } from "react";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -29,7 +30,7 @@ interface RiskMapProps {
 type ProjectAreaResponse = {
   id: number;
   name: string;
-  boundary: any;
+  boundary: any; // GeoJSON geometry (object or string)
   bbox: { min_lat: number; min_lng: number; max_lat: number; max_lng: number };
 };
 
@@ -37,7 +38,7 @@ type SectorGeo = {
   sector_id: number;
   name: string;
   status: string;
-  boundary: any;
+  boundary: any; // GeoJSON geometry (object or string)
 };
 
 type SensorGeo = {
@@ -93,6 +94,7 @@ type HistoricalFire = {
 function normalizeGeoJsonGeometry(input: any): any | null {
   if (!input) return null;
 
+  // If backend returns json as string, parse it.
   if (typeof input === "string") {
     try {
       const parsed = JSON.parse(input);
@@ -102,6 +104,7 @@ function normalizeGeoJsonGeometry(input: any): any | null {
     }
   }
 
+  // Some DB drivers might return { type: '...', coordinates: ... } already.
   if (typeof input === "object" && typeof input.type === "string") {
     return input;
   }
@@ -154,6 +157,7 @@ const DrawingControls = ({
     console.log('DrawingControls enabled changed:', enabled);
     if (!enabled) return;
 
+    // إنشاء أدوات الرسم
     const drawControl = new (L.Control as any).Draw({
       draw: {
         polyline: false,
@@ -185,27 +189,32 @@ const DrawingControls = ({
 
     map.addControl(drawControl);
 
+    // التعامل مع حدث إنشاء المضلع
     const handleDrawCreated = (e: any) => {
       console.log('Draw created event fired');
       const layer = e.layer;
       const geoJson = layer.toGeoJSON();
       console.log('GeoJSON created:', geoJson);
 
+      // تنظيف الرسم السابق
       map.eachLayer((layer) => {
         if (layer instanceof L.Polygon && (layer as any)._drawnByUser) {
           map.removeLayer(layer);
         }
       });
 
+      // إضافة علامة للمضلع المرسوم
       (layer as any)._drawnByUser = true;
       layer.addTo(map);
 
+      // إرسال البيانات للمكون الأب
       console.log('Polygon drawn:', geoJson.geometry);
       console.log('Calling onPolygonDrawn callback:', !!onPolygonDrawn);
       onPolygonDrawn?.(geoJson.geometry);
       console.log('onPolygonDrawn callback called');
     };
 
+    // التعامل مع إلغاء الرسم
     const handleDrawCancel = () => {
       onDrawingCanceled?.();
     };
@@ -303,29 +312,32 @@ const FitAndRender = ({
   };
 
   const sensorColor = (sensor: any) => {
+    // تحديد اللون بناءً على بيانات المخاطر الأخيرة
     const temperature = sensor.last_temperature;
     const humidity = sensor.last_humidity;
     const smokeLevel = sensor.last_smoke_level;
 
+    // منطق بسيط للمخاطر
     if (temperature && temperature > 80) {
-      return "#ef4444";
+      return "#ef4444"; // أحمر - درجة حرارة عالية
     }
     if (smokeLevel && smokeLevel > 2.0) {
-      return "#f59e0b";
+      return "#f59e0b"; // برتقالي - دخان مرتفع
     }
     if (humidity && humidity < 20) {
-      return "#f59e0b";
+      return "#f59e0b"; // برتقالي - رطوبة منخفضة
     }
 
+    // حالة الـ sensor العادية
     switch (sensor.status) {
       case "active":
-        return "#10b981";
+        return "#10b981"; // أخضر
       case "offline":
-        return "#ef4444";
+        return "#ef4444"; // أحمر
       case "faulty":
-        return "#f59e0b";
+        return "#f59e0b"; // برتقالي
       default:
-        return "#6b7280";
+        return "#6b7280"; // رمادي
     }
   };
 
@@ -407,6 +419,7 @@ const FitAndRender = ({
                     <div className="font-semibold text-lg">{s.name}</div>
                     <div className="text-sm text-gray-600">Type: {s.type} • Sector: {s.sector_name}</div>
 
+                    {/* حالة الـ sensor */}
                     <div className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
                       s.status === 'active' ? 'bg-green-100 text-green-800' :
                       s.status === 'offline' ? 'bg-red-100 text-red-800' :
@@ -415,6 +428,7 @@ const FitAndRender = ({
                       {s.status}
                     </div>
 
+                    {/* البيانات الحية */}
                     <div className="border-t pt-2 space-y-1">
                       <div className="font-medium text-sm">Latest Readings:</div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
@@ -425,6 +439,7 @@ const FitAndRender = ({
                       </div>
                     </div>
 
+                    {/* معلومات زمنية */}
                     {s.last_reading_at && (
                       <div className="text-xs text-gray-500 border-t pt-1">
                         Last reading: {new Date(s.last_reading_at).toLocaleString()}
@@ -523,6 +538,7 @@ const FitAndRender = ({
 const RiskMap: FC<RiskMapProps> = ({ className, drawingMode, onPolygonDrawn, onDrawingCanceled }) => {
   console.log('RiskMap props:', { drawingMode, hasOnPolygonDrawn: !!onPolygonDrawn, hasOnDrawingCanceled: !!onDrawingCanceled });
 
+  // تتبع تغييرات drawingMode
   React.useEffect(() => {
     console.log('drawingMode changed in RiskMap:', drawingMode);
   }, [drawingMode]);
@@ -559,6 +575,7 @@ const RiskMap: FC<RiskMapProps> = ({ className, drawingMode, onPolygonDrawn, onD
     };
     loadAll();
 
+    // شبه فوري: تحديث طبقات sensors + alerts كل 10 ثواني
     const t = window.setInterval(async () => {
       try {
         const sensorGeo = await apiService.getSensorsGeo();
@@ -567,10 +584,12 @@ const RiskMap: FC<RiskMapProps> = ({ className, drawingMode, onPolygonDrawn, onD
         setSensors(sensorGeo || []);
         setAlerts(mapAlerts || null);
       } catch (e) {
+        // ignore polling errors
       }
     }, 10000);
 
     const onProjectAreaUpdated = () => {
+      // reload boundary + sectors immediately after save
       loadAll();
     };
     window.addEventListener("project-area-updated", onProjectAreaUpdated);

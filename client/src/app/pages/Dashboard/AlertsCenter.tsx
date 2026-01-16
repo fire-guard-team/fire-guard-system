@@ -53,6 +53,7 @@ const AlertsCenter = () => {
   } = useAlertManager();
 
   useEffect(() => {
+    // Additional filtering can be implemented here if needed
     loadAlerts();
   }, [filters, currentPage, loadAlerts]);
 

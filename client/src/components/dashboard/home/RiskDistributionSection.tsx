@@ -15,10 +15,10 @@ interface RiskDistributionSectionProps {
 }
 
 const getRiskColor = (score: number) => {
-  if (score >= 70) return 'bg-red-500';
-  if (score >= 40) return 'bg-yellow-400';
-  if (score >= 20) return 'bg-orange-400';
-  return 'bg-green-500';
+  if (score >= 70) return 'bg-red-500';      // Fire
+  if (score >= 40) return 'bg-yellow-400';   // Warning
+  if (score >= 20) return 'bg-orange-400';   // Caution
+  return 'bg-green-500';                     // Safe
 };
 
 const getRiskLabel = (score: number) => {

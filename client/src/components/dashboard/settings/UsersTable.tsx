@@ -34,6 +34,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [useSampleData, setUseSampleData] = useState(false);
 
+  // Sample data for testing
   const sampleUsers: User[] = [
     {
       id: 1,
@@ -72,15 +73,18 @@ const UsersTable: React.FC<UsersTableProps> = ({
 
       const response = await apiService.getUsers(params);
 
+      // Handle pagination response
       if (response.data && Array.isArray(response.data)) {
         setUsers(response.data);
       } else if (response.data && response.data.data) {
+        // Laravel pagination format
         setUsers(response.data.data);
       } else {
         setUsers([]);
       }
     } catch (err) {
       console.error("Error loading users:", err);
+      // fallback to sample data
       setUsers(sampleUsers);
       setError(null);
     } finally {
@@ -92,6 +96,7 @@ const UsersTable: React.FC<UsersTableProps> = ({
     loadUsers();
   }, [refreshKey, searchQuery]);
 
+  // Filter users based on search query
   const filteredUsers = users.filter(
     (user) =>
       user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

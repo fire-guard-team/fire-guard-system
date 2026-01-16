@@ -31,6 +31,7 @@ interface RecentAlertsProps {
 }
 
 const RecentAlerts: FC<RecentAlertsProps> = ({ alertData = [], loading = false }) => {
+    // Convert data to component format
     const items: AlertItem[] = alertData.map((alert) => ({
         ...alert,
         icon: levelIcons[alert.level],

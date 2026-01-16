@@ -53,15 +53,18 @@ export const useDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // جلب إحصائيات Dashboard
   const fetchStats = useCallback(async () => {
     try {
       const response = await apiService.getDashboardStats();
       setStats(response);
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
+      // لا نحدد error لأن Dashboard يجب أن يعمل حتى بدون بيانات
     }
   }, []);
 
+  // جلب بيانات الحساسات الحية
   const fetchLiveSensorData = useCallback(async () => {
     try {
       const response = await apiService.getDashboardLiveSensorData();
@@ -72,6 +75,7 @@ export const useDashboard = () => {
     }
   }, []);
 
+  // جلب آخر التنبيهات
   const fetchRecentAlerts = useCallback(async () => {
     try {
       const response = await apiService.getDashboardRecentAlerts();
@@ -82,6 +86,7 @@ export const useDashboard = () => {
     }
   }, []);
 
+  // جلب توزيع المخاطر
   const fetchRiskDistribution = useCallback(async () => {
     try {
       const response = await apiService.getDashboardRiskDistribution();
@@ -92,6 +97,7 @@ export const useDashboard = () => {
     }
   }, []);
 
+  // جلب جميع البيانات
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -111,14 +117,16 @@ export const useDashboard = () => {
     }
   }, [fetchStats, fetchLiveSensorData, fetchRecentAlerts, fetchRiskDistribution]);
 
+  // تحديث البيانات تلقائياً كل 30 ثانية
   useEffect(() => {
     fetchAllData();
 
-    const interval = setInterval(fetchAllData, 30000);
+    const interval = setInterval(fetchAllData, 30000); // 30 seconds
 
     return () => clearInterval(interval);
   }, [fetchAllData]);
 
+  // تحديث البيانات يدوياً
   const refreshData = useCallback(() => {
     fetchAllData();
   }, [fetchAllData]);
@@ -131,6 +139,7 @@ export const useDashboard = () => {
     loading,
     error,
     refreshData,
+    // وظائف فردية للتحديث
     fetchStats,
     fetchLiveSensorData,
     fetchRecentAlerts,

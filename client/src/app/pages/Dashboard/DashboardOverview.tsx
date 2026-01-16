@@ -46,6 +46,7 @@ const DashboardOverview = () => {
     );
   }
 
+  // Determine status type based on data
   const getStatusType = (value: number, thresholds: { warning: number; critical: number }) => {
     if (value >= thresholds.critical) return 'critical';
     if (value >= thresholds.warning) return 'elevated';

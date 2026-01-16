@@ -33,6 +33,7 @@ class DashboardController extends Controller
             ]);
         }
 
+        // إحصائيات القطاعات
         $sectorStats = DB::table('sectors')
             ->whereRaw("ST_Within(boundary, (SELECT boundary FROM project_areas WHERE id = ?))", [$activeProjectArea->id])
             ->selectRaw("
@@ -43,6 +44,7 @@ class DashboardController extends Controller
             ")
             ->first();
 
+        // إحصائيات التنبيهات
         $alertStats = DB::table('alerts')
             ->selectRaw("
                 COUNT(*) as total_alerts,
@@ -51,7 +53,10 @@ class DashboardController extends Controller
             ")
             ->first();
 
+        // حساب Fire Risk Index
         $fireRiskIndex = $this->calculateFireRiskIndex($activeProjectArea->id);
+
+        // تحديد حالة النظام
         $systemStatus = $this->getSystemStatus($sectorStats, $alertStats);
 
         return response()->json([
@@ -85,6 +90,7 @@ class DashboardController extends Controller
             return response()->json(['data' => []]);
         }
 
+        // جلب آخر قراءات لكل نوع حساس
         $sensorTypes = ['Temperature', 'Humidity', 'Smoke', 'Multi-sensor'];
 
         $liveData = [];
@@ -165,6 +171,7 @@ class DashboardController extends Controller
             return response()->json(['data' => []]);
         }
 
+        // حساب متوسط المخاطر لكل قطاع
         $sectorRisks = DB::table('environmental_data as ed')
             ->join('sensors as s', 'ed.sensor_id', '=', 's.sensor_id')
             ->join('sectors as sec', 's.sector_id', '=', 'sec.sector_id')
@@ -182,6 +189,7 @@ class DashboardController extends Controller
             ->groupBy('sec.sector_id', 'sec.name', 'sec.status')
             ->get()
             ->map(function ($sector) {
+                // حساب المخاطر والحالة بشكل متسق مع RiskEvaluationService
                 $evaluation = $this->evaluateSectorRisk([
                     'temperature' => $sector->avg_temp,
                     'humidity' => $sector->avg_humidity,
@@ -224,12 +232,14 @@ class DashboardController extends Controller
             return 0.0;
         }
 
+        // حساب Fire Risk Index للمشروع بأكمله
         $evaluation = $this->evaluateSectorRisk([
             'temperature' => $avgData->avg_temp,
             'humidity' => $avgData->avg_humidity,
             'smoke_level' => $avgData->avg_smoke
         ]);
 
+        // تحويل نقاط المخاطر (0-100) إلى Fire Risk Index (0-10)
         return round($evaluation['risk_score'] / 10, 1);
     }
 
@@ -311,6 +321,7 @@ class DashboardController extends Controller
         $riskScore = 0;
         $decision = 'safe';
 
+        // Temperature Risk (0-40 points)
         if ($temperature !== null) {
             if ($temperature > 90) {
                 $riskScore += 40;
@@ -321,6 +332,7 @@ class DashboardController extends Controller
             }
         }
 
+        // Humidity Risk (inverse relationship with fire risk) (0-20 points)
         if ($humidity !== null) {
             if ($humidity < 10) {
                 $riskScore += 20;
@@ -331,6 +343,7 @@ class DashboardController extends Controller
             }
         }
 
+        // Smoke Level Risk (0-40 points)
         if ($smokeLevel !== null) {
             if ($smokeLevel > 5.0) {
                 $riskScore += 40;
@@ -344,6 +357,7 @@ class DashboardController extends Controller
             }
         }
 
+        // Combined Risk Logic
         if ($riskScore >= 70) {
             $decision = 'fire';
         } elseif ($riskScore >= 40) {
@@ -352,7 +366,9 @@ class DashboardController extends Controller
             $decision = 'caution';
         }
 
+        // Special cases
         if ($temperature !== null && $humidity !== null && $smokeLevel !== null) {
+            // High temperature + Low humidity + Any smoke = High fire risk
             if ($temperature > 80 && $humidity < 20 && $smokeLevel > 0.3) {
                 $decision = 'fire';
                 $riskScore = max($riskScore, 85);

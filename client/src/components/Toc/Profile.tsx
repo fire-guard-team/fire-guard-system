@@ -1,3 +1,4 @@
+// Import Dependencies
 import React from "react";
 import {
   Popover,
@@ -16,6 +17,7 @@ import { Avatar, AvatarDot, type AvatarColor } from "../ui/Avatar";
 import { Button } from "../ui/Button";
 import { apiService } from "../../utils/api";
 
+// ----------------------------------------------------------------------
 
 interface LinkItem {
   id: string;
@@ -77,7 +79,9 @@ export function Profile() {
       await apiService.logout();
     } catch (error) {
       console.error('Logout error:', error);
+      // Continue with logout even if API call fails
     } finally {
+      // Clear local storage and redirect to login
       apiService.removeToken();
       navigate('/login');
     }

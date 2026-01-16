@@ -19,6 +19,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
     checkAuth();
   }, [navigate]);
 
+  // Don't render children if not authenticated
   if (!apiService.isAuthenticated()) {
     return null;
   }

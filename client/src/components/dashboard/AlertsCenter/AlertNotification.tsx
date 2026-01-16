@@ -35,6 +35,7 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
   const [isVisible, setIsVisible] = useState(true);
   const [timeLeft, setTimeLeft] = useState(autoClose ? Math.ceil(autoCloseDelay / 1000) : 0);
 
+  // Alert configurations
   const alertConfig = {
     Critical: {
       bgColor: 'bg-red-600',
@@ -76,6 +77,7 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
 
   const config = alertConfig[alert.alert_level];
 
+  // Initialize audio context and handle notifications
   useEffect(() => {
     const initAudio = async () => {
       try {
@@ -84,12 +86,14 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
           (window as any).audioContext = new AudioContextClass();
         }
 
+        // Resume audio context on user interaction
         const resumeAudio = async () => {
           if ((window as any).audioContext.state === 'suspended') {
             await (window as any).audioContext.resume();
           }
         };
 
+        // Add listeners for user interaction
         const handleInteraction = () => {
           resumeAudio();
           document.removeEventListener('click', handleInteraction);
@@ -99,6 +103,7 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
         document.addEventListener('click', handleInteraction);
         document.addEventListener('touchstart', handleInteraction);
 
+        // Try to resume immediately
         await resumeAudio();
 
         return () => {
@@ -112,9 +117,11 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
 
     const cleanup = initAudio();
 
+    // Play sound and show notification when alert appears
     const timer = setTimeout(() => {
       playAlertSound();
 
+      // Show browser notification as backup
       if ('Notification' in window) {
         if (Notification.permission === 'default') {
           Notification.requestPermission();
@@ -128,6 +135,7 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
             requireInteraction: alert.alert_level === 'Critical'
           });
 
+          // Auto close after 8 seconds for non-critical alerts
           if (alert.alert_level !== 'Critical') {
             setTimeout(() => {
               notification.close();
@@ -135,7 +143,7 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
           }
         }
       }
-    }, 200);
+    }, 200); // Slightly longer delay
 
     return () => {
       clearTimeout(timer);
@@ -146,6 +154,7 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
   const playAlertSound = () => {
     console.log('🎵 Attempting to play sound for alert level:', alert.alert_level);
     try {
+      // Use initialized audio context
       const audioContext = (window as any).audioContext;
       if (!audioContext) {
         console.log('❌ Audio context not available');
@@ -154,6 +163,7 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
 
       console.log('✅ Audio context available, state:', audioContext.state);
 
+      // Resume audio context if suspended (required by some browsers)
       if (audioContext.state === 'suspended') {
         console.log('🔄 Resuming suspended audio context...');
         audioContext.resume().then(() => {
@@ -226,11 +236,13 @@ const AlertNotification: React.FC<AlertNotificationProps> = ({
       }
     };
 
+    // Play multiple tones for alerts
     for (let i = 0; i < repetitions; i++) {
       setTimeout(() => playTone(frequency, duration), i * (duration + 0.1) * 1000);
     }
   };
 
+  // Auto close timer
   useEffect(() => {
     if (!autoClose || !isVisible) return;
 

@@ -13,6 +13,7 @@ const ForestSectors = () => {
   console.log('ForestSectors render - drawingMode:', drawingMode);
   console.log('ForestSectors render - current state:', { drawingMode, openBoundary, drawnBoundary });
 
+  // Track drawingMode changes
   useEffect(() => {
     console.log('=== DRAWINGMODE STATE CHANGED in ForestSectors:', drawingMode);
     console.log('This should trigger a re-render of all components');
@@ -20,7 +21,9 @@ const ForestSectors = () => {
   }, [drawingMode]);
 
   const handleSectorCreated = () => {
+    // Update data when new sector is created
     window.dispatchEvent(new CustomEvent('project-area-updated'));
+    // Reset boundary after creation
     setDrawnBoundary(null);
   };
 
@@ -63,7 +66,10 @@ const ForestSectors = () => {
               return newMode;
             });
 
+            // Attempt to read the new value (but this won't work because setState is asynchronous)
             console.log('Note: setDrawingMode is asynchronous, so drawingMode is still false here');
+
+            // Confirm immediate change
             setTimeout(() => {
               console.log('Timeout check - drawingMode should be true now in next render');
             }, 0);
@@ -77,6 +83,7 @@ const ForestSectors = () => {
         open={openBoundary}
         onClose={() => setOpenBoundary(false)}
         onSaved={() => {
+          // refresh happens via existing polling in RiskMap
         }}
       />
     </div>

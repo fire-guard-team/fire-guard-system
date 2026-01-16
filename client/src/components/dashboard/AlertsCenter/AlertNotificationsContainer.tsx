@@ -36,6 +36,7 @@ const AlertNotificationsContainer: React.FC<AlertNotificationsContainerProps> = 
     return null;
   }
 
+  // Sort notifications by priority (Critical first, then High, etc.)
   const sortedNotifications = [...notifications].sort((a, b) => {
     const priorityOrder = { Critical: 4, High: 3, Medium: 2, Low: 1 };
     const aPriority = priorityOrder[a.alert.alert_level] || 0;

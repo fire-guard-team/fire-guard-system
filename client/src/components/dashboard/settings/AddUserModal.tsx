@@ -33,6 +33,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
   onUserAdded,
   user = null,
 }) => {
+  console.log("AddUserModal render:", { open, user });
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -40,7 +41,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
     password_confirmation: "",
     role_id: "",
     avatar: null as File | null,
-    status: "active"
+    status: "active", // active or inactive
   });
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(false);
@@ -65,7 +66,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         password_confirmation: "",
         role_id: user.role_id?.toString() || "",
         avatar: null,
-        status: "active"
+        status: "active", // Default to active for existing users
       });
     } else {
       setFormData({
@@ -82,10 +83,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
   const loadRoles = async () => {
     try {
+      console.log("Loading roles...");
       const response = await apiService.getRoles();
+      console.log("Roles loaded:", response.data);
       setRoles(response.data || []);
     } catch (error) {
       console.error("Error loading roles:", error);
+      // Set sample roles for testing
       setRoles([
         { id: 1, role: 'admin', name: 'Administrator' },
         { id: 2, role: 'user', name: 'User' }
@@ -95,9 +99,11 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("Form submitted", { formData, isEditing, user });
     setLoading(true);
     setErrors({});
 
+    // Client-side validation
     const newErrors: Record<string, string[]> = {};
 
     if (!formData.name.trim()) {
@@ -142,6 +148,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
     try {
       if (isEditing && user) {
+        // Update existing user - send as JSON
         const updateData = {
           name: formData.name,
           email: formData.email,
@@ -150,6 +157,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         };
         await apiService.updateUser(user.id, updateData);
       } else {
+        // Create new user - send as FormData with file
         const formDataToSend = new FormData();
         formDataToSend.append('name', formData.name);
         formDataToSend.append('email', formData.email);
@@ -164,6 +172,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
         await apiService.createUser(formDataToSend);
       }
 
+      console.log("User saved successfully, calling onUserAdded");
       onUserAdded();
     } catch (error: any) {
       if (error.response?.data?.errors) {
@@ -181,13 +190,19 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear error for this field when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: [] }));
     }
   };
 
-  if (!open) return null;
+  if (!open) {
+    console.log("Modal not open, returning null");
+    return null;
+  }
 
+  console.log("Rendering modal");
+  console.log("Modal JSX rendering");
   return (
     <div className="fixed inset-0 z-[9999] overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">

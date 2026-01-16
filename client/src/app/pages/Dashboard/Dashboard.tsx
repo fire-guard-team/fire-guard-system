@@ -27,43 +27,36 @@ const Dashboard = () => {
               content: "Dashboard",
               link: "/dashboard",
               icon: <MdOutlineDashboard />,
-              permission: "view_dashboard",
             },
             {
               content: "Interactive Map",
               link: "/dashboard/map",
               icon: <MdOutlineMap />,
-              permission: "view_interactive_map",
             },
             {
               content: "Alerts Center",
               link: "/dashboard/alerts",
               icon: <MdOutlineNotificationsActive />,
-              permission: "view_alerts_center",
             },
             {
               content: "Sensor Management",
               link: "/dashboard/sensors",
               icon: <MdSensors />,
-              permission: "view_sensor_management",
             },
             {
               content: "Forest & Sector Management",
               link: "/dashboard/forest-sectors",
               icon: <GiPineTree />,
-              permission: "view_forest_sectors",
             },
             {
               content: "Reports & Analytics",
               link: "/dashboard/reports",
               icon: <MdOutlineInsights />,
-              permission: "view_reports_analytics",
             },
             {
               content: "Manage Users",
               link: "/dashboard/users",
               icon: <MdOutlineSettings />,
-              permission: "manage_users",
             },
           ]}
         />

@@ -16,7 +16,6 @@ import Reports from "./app/pages/Dashboard/Reports.tsx";
 import UsersManagement from "./app/pages/Dashboard/UsersManagement.tsx";
 import DashboardOverview from "./app/pages/Dashboard/DashboardOverview.tsx";
 import AuthGuard from "./components/Auth/AuthGuard.tsx";
-import RouteGuard from "./components/Auth/RouteGuard.tsx";
 
 const routes = createBrowserRouter([
   {
@@ -47,31 +46,31 @@ const routes = createBrowserRouter([
     children:[
       {
         path:"",
-        element : <RouteGuard permission="view_dashboard"><DashboardOverview /></RouteGuard>
+        element : <DashboardOverview />
       },
       {
         path:"map",
-        element : <RouteGuard permission="view_interactive_map"><InteractiveMap /></RouteGuard>
+        element : <InteractiveMap />
       },
       {
         path:"alerts",
-        element : <RouteGuard permission="view_alerts_center"><AlertsCenter /></RouteGuard>
+        element : <AlertsCenter />
       },
       {
         path:"sensors",
-        element : <RouteGuard permission="view_sensor_management"><SensorManagement /></RouteGuard>
+        element : <SensorManagement />
       },
       {
         path:"forest-sectors",
-        element : <RouteGuard permission="view_forest_sectors"><ForestSectors /></RouteGuard>
+        element : <ForestSectors />
       },
       {
         path:"reports",
-        element : <RouteGuard permission="view_reports_analytics"><Reports /></RouteGuard>
+        element : <Reports />
       },
       {
         path:"users",
-        element : <RouteGuard permission="manage_users"><UsersManagement /></RouteGuard>
+        element : <UsersManagement />
       },
     ]
   },
